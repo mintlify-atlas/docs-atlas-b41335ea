@@ -1,0 +1,70 @@
+{
+  "projectType": "frontend",
+  "projectName": "Asignador de Zonas de Bilbao",
+  "projectDescription": "A Progressive Web App (PWA) that processes Excel files with street listings and automatically assigns each street to its corresponding zone in Bilbao.",
+  "theme": "willow",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/process-excel",
+              "features/add-street",
+              "features/lookup",
+              "features/dictionary"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/deployment",
+              "guides/updating-dictionary",
+              "guides/pwa-offline",
+              "guides/service-worker"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/zones",
+              "reference/data-format",
+              "reference/dependencies"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Excel file processing (.xlsx / .xls) with automatic zone assignment",
+    "Street-to-zone dictionary with ~500 entries covering all Bilbao neighborhoods",
+    "Coverage statistics: total streets, identified, missing, and percentage",
+    "Unidentified streets list with one-click add-to-dictionary flow",
+    "Paginated preview table with search and filter controls",
+    "Custom street entries saved in localStorage (persist across sessions)",
+    "Export results as Excel and unmatched streets as .txt",
+    "Full dictionary viewer with search and zone filters",
+    "Offline-capable PWA with Service Worker cache-first strategy",
+    "Installable on mobile and desktop as a standalone app"
+  ],
+  "publicApiSurface": [
+    "asignarZona(calle) — returns zone string for a given street name",
+    "getDictionary() — merges base dictionary (zonasEstandar) with custom localStorage entries",
+    "zonasEstandar — base street-to-zone mapping object (~500 entries in js/data.js)",
+    "customStreets — user-defined overrides stored under localStorage key 'zonasCustom_v1'",
+    "renderResults(data) — renders stats bar, zone breakdown, unmatched list, and preview table",
+    "renderDictionary() — populates the full dictionary viewer with search/filter",
+    "renderDictStats() — renders per-zone entry counts in the Consult tab",
+    "CACHE version constant in sw.js — controls Service Worker cache invalidation on deploy"
+  ]
+}
