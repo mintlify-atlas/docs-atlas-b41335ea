@@ -1,0 +1,153 @@
+---
+title: 'Data format reference'
+description: 'Input and output Excel format, dictionary format, and localStorage schema used by the app.'
+---
+
+This page describes every data format the app reads, writes, or stores.
+
+## Input Excel file
+
+The app accepts `.xlsx` and `.xls` files. The file must contain a column named **exactly** `Calle`.
+
+| Requirement | Detail |
+|---|---|
+| Column name | `Calle` (case-sensitive) |
+| Supported formats | `.xlsx`, `.xls` |
+| Column position | Any column in the sheet |
+| Other columns | Preserved unchanged in the output |
+
+Example input:
+
+| Calle | Código Postal | Municipio |
+|---|---|---|
+| Gran Vía Don Diego López de Haro | 48001 | Bilbao |
+| Calle Iparraguirre | 48011 | Bilbao |
+| Calle Blas de Otero | 48014 | Bilbao |
+
+<Note>
+  If the `Calle` column is missing, the app cannot assign zones and will report all rows as unmatched.
+</Note>
+
+## Output Excel file
+
+The app writes a new file named `Calles_Asignadas.xlsx`. It contains all original columns plus a `Zona` column appended at the end.
+
+| Property | Value |
+|---|---|
+| File name | `Calles_Asignadas.xlsx` |
+| Sheet name | `Calles con Zonas` |
+| New column | `Zona` |
+| Unmatched rows | `Zona` cell left empty |
+
+Example output:
+
+| Calle | Código Postal | Municipio | Zona |
+|---|---|---|---|
+| Gran Vía Don Diego López de Haro | 48001 | Bilbao | Bilbao Centro |
+| Calle Iparraguirre | 48011 | Bilbao | Bilbao Centro |
+| Calle Blas de Otero | 48014 | Bilbao | Deusto |
+
+The app uses the following SheetJS calls to produce this file:
+
+```js
+const ws = XLSX.utils.json_to_sheet(processedData);
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, 'Calles con Zonas');
+XLSX.writeFile(wb, 'Calles_Asignadas.xlsx');
+```
+
+## Dictionary format (`js/data.js`)
+
+The standard dictionary is a plain JavaScript object named `zonasEstandar`. Each key is an **uppercase string fragment** that is matched as a substring against street values. Each value is the zone name string to assign.
+
+```js
+const zonasEstandar = {
+    // DEUSTO
+    "ANDALUCÍA":             "Deusto",
+    "ARAGÓN":                "Deusto",
+    "AV MADARIAGA":          "Deusto",
+    "AV RAMON Y CAJAL":      "Deusto",
+    "BLAS DE OTERO":         "Deusto",
+    "BURGOS":                "Deusto",
+    "CANTABRIA":             "Deusto",
+    "GALICIA":               "Deusto",
+    "GREGORIO BALPARDA":     "Deusto",
+    "ITURRIKOETXE":          "Deusto",
+
+    // DEUSTO MUELLE
+    "RI DEUSTU":             "Deusto Muelle",
+    "RAMAL OLABEAGA":        "Deusto Muelle",
+    "RI ZORROTZAURRE":       "Deusto Muelle",
+    "CARGUERAS":             "Deusto Muelle",
+    "SAGARDUI":              "Deusto Muelle",
+
+    // DEUSTO MONTE
+    "BIZKARGI":              "Deusto Monte",
+    "ARRANKUDIAGA":          "Deusto Monte",
+
+    // BILBAO CENTRO
+    "GRAN VIA":              "Bilbao Centro",
+    "IPARRAGUIRRE":          "Bilbao Centro",
+    "AUTONOMIA":             "Bilbao Centro",
+
+    // ... (additional entries)
+};
+```
+
+Key rules:
+
+- Keys must be **uppercase**. The matching algorithm uppercases the input before comparison, so mixed-case keys will not match.
+- Keys are matched as substrings, not exact matches.
+- Shorter or more generic keys (e.g., `"GALICIA"`) carry a higher risk of false matches.
+
+## localStorage schema
+
+Custom street entries are persisted in the browser's `localStorage` under the key `'zonasCustom_v1'`. The value is a JSON-stringified object with the same shape as `zonasEstandar`: uppercase string keys mapped to zone name strings.
+
+**Key:** `'zonasCustom_v1'`
+
+**Value format:**
+
+```json
+{
+  "CALLE EJEMPLO": "Bilbao Centro",
+  "NUEVA VIA": "Rekalde"
+}
+```
+
+On startup, the app reads this key and merges its contents over the standard dictionary. Custom entries take priority over entries with the same key in `zonasEstandar`.
+
+<Info>
+  Clearing browser storage (e.g., via DevTools → Application → Local Storage) removes all custom entries. Export your custom dictionary as JSON before clearing storage if you want to keep your entries.
+</Info>
+
+## Unmatched streets export (`.txt`)
+
+After processing, you can download a list of street values that had no zone match. The file is a plain text file with one street name per line.
+
+```
+Calle Sin Registro
+Urbanización Nueva
+Paseo Desconocido
+```
+
+This file is generated using `Blob` and `URL.createObjectURL`, then triggered as a browser download.
+
+## Custom dictionary export (JSON)
+
+You can export your custom entries as a JSON file. The file contains the `customStreets` object formatted with two-space indentation:
+
+```js
+JSON.stringify(customStreets, null, 2)
+```
+
+Example output:
+
+```json
+{
+  "CALLE EJEMPLO": "Bilbao Centro",
+  "NUEVA VIA": "Rekalde"
+}
+```
+
+You can use this file as a backup or to transfer custom entries to another browser or device.

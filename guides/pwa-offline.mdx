@@ -1,0 +1,135 @@
+---
+title: 'PWA and offline usage'
+description: 'How the app works offline and how to install it as a PWA on any device.'
+---
+
+Asignador de Zonas de Bilbao is a Progressive Web App (PWA). This means it is installable on your device and works fully offline after the first visit.
+
+## What PWA means for this app
+
+- **Installable** — you can add it to your home screen or desktop like a native app.
+- **Offline-capable** — once loaded, the app works without an internet connection.
+- **No server needed** — all Excel processing happens in the browser. No data leaves your device.
+
+## How offline works
+
+The app uses a **cache-first** strategy. On the first load, the Service Worker pre-caches every asset listed in the `ASSETS` array in `sw.js`:
+
+```js
+const ASSETS = [
+    './index.html',
+    './manifest.json',
+    './css/styles.css',
+    './js/data.js',
+    './js/app.js',
+    './assets/bilbo.jpg',
+    './assets/images.png',
+    './assets/icono192x192.png',
+    './assets/icono512x512.png',
+    'https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js',
+    'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap',
+];
+```
+
+This includes the SheetJS Excel library (loaded from CDN) and Google Fonts — both are cached on first load so they are available offline.
+
+On every subsequent request, the Service Worker returns the cached version immediately. If a resource is not in the cache (which should not happen under normal conditions), it falls back to the network.
+
+<Info>
+All Excel file processing is entirely client-side. The files you upload are never sent to any server.
+</Info>
+
+## Installing the app
+
+<Tabs>
+  <Tab title="Android (Chrome)">
+    <Steps>
+      <Step title="Open the app in Chrome">
+        Navigate to the app URL in Chrome on Android.
+      </Step>
+      <Step title="Tap the install prompt">
+        Chrome displays an **Add to Home screen** banner at the bottom of the screen. Tap it.
+      </Step>
+      <Step title="Confirm installation">
+        Tap **Add**. The app appears on your home screen with the name **Zonas Bilbao** and the app icon.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="iOS (Safari)">
+    <Steps>
+      <Step title="Open the app in Safari">
+        Navigate to the app URL in Safari on iPhone or iPad.
+      </Step>
+      <Step title="Open the Share menu">
+        Tap the **Share** button (the box with an arrow pointing up) at the bottom of the screen.
+      </Step>
+      <Step title="Add to Home Screen">
+        Scroll down and tap **Add to Home Screen**. Confirm by tapping **Add**.
+      </Step>
+    </Steps>
+
+    <Note>
+    iOS Safari has limited Service Worker support. Offline functionality may behave differently than on Chrome. The app still installs and runs, but cache behavior can vary across iOS versions.
+    </Note>
+  </Tab>
+  <Tab title="Chrome desktop">
+    <Steps>
+      <Step title="Open the app in Chrome">
+        Navigate to the app URL.
+      </Step>
+      <Step title="Click the install icon">
+        Look for the install icon (a computer with a down-arrow) in the address bar on the right side. Click it.
+      </Step>
+      <Step title="Confirm installation">
+        Click **Install**. The app opens in its own window and appears in your applications.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Edge desktop">
+    <Steps>
+      <Step title="Open the app in Edge">
+        Navigate to the app URL.
+      </Step>
+      <Step title="Open the app menu">
+        Click the **...** menu in the top-right corner, then select **Apps → Install this site as an app**.
+      </Step>
+      <Step title="Confirm installation">
+        Click **Install**.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Manifest configuration
+
+The PWA metadata is defined in `manifest.json`:
+
+```json
+{
+  "name": "Asignador de Zonas de Bilbao",
+  "short_name": "Zonas Bilbao",
+  "display": "standalone",
+  "background_color": "#07070d",
+  "theme_color": "#07070d",
+  "icons": [
+    { "src": "assets/icono192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icono512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+```
+
+- `display: standalone` — the app opens without browser chrome (no address bar).
+- `short_name` — used as the label under the home screen icon.
+- `theme_color` — controls the status bar and title bar color on mobile.
+
+## Browser compatibility
+
+| Browser | PWA install | Offline support |
+|---|---|---|
+| Chrome / Edge | Full support | Full support |
+| Firefox | No install prompt | Full offline support |
+| Safari / iOS | Via Share menu | Partial (varies by iOS version) |
+
+<Warning>
+The Service Worker requires **HTTPS** in production. It works on `localhost` for development, but will not register on plain HTTP or `file://` URLs.
+</Warning>

@@ -1,0 +1,89 @@
+---
+title: 'Zone reference'
+description: 'Complete list of all 20 geographic zones in Bilbao covered by the app.'
+---
+
+The app maps Bilbao street names to one of 20 geographic zones. Each zone corresponds to a neighborhood or sub-area of Bilbao, used for delivery routing and administrative assignments.
+
+## All zones
+
+| # | Zone name |
+|---|---|
+| 1 | Deusto |
+| 2 | Deusto Muelle |
+| 3 | Deusto Monte |
+| 4 | San Ignacio |
+| 5 | Matiko |
+| 6 | Matiko Alto |
+| 7 | Bilbao Centro |
+| 8 | Bilbao-Basurtu |
+| 9 | Bilbao Muelle |
+| 10 | Kasko Viejo |
+| 11 | Santutxu |
+| 12 | Santutxu Alto |
+| 13 | San Francisco |
+| 14 | Miribilla |
+| 15 | Zamakola |
+| 16 | Zorroza |
+| 17 | Zurbaranbarri |
+| 18 | Rekalde |
+| 19 | Txurdinaga |
+| 20 | Txurdinaga - Alto |
+
+## How zone matching works
+
+The app normalizes each street value to uppercase and then checks whether the value **includes** any dictionary key using JavaScript's `.includes()` method.
+
+```js
+function asignarZona(calle) {
+    if (!calle) return '';
+    const upper = calle.toString().toUpperCase().trim();
+    for (const [clave, zona] of Object.entries(getDictionary())) {
+        if (upper.includes(clave.toUpperCase())) return zona;
+    }
+    return '';
+}
+```
+
+This means a key like `"GRAN VIA"` will match a full street value like `"Gran Vía Don Diego López de Haro"` — partial substring matching is intentional. Short or generic keys can therefore match unintended streets, so key specificity matters when editing the dictionary.
+
+## Special cases
+
+One entry in the standard dictionary is marked as pending verification:
+
+| Street key | Assigned value |
+|---|---|
+| `AV LEHENDAKARI AGUIR` | `Deusto o San Ignacio *Verificacion pdnt*` |
+
+This street runs along the boundary between Deusto and San Ignacio. The assignment has not been confirmed. Rows matched by this key will carry the `*Verificacion pdnt*` flag in the `Zona` column of the exported file.
+
+<Warning>
+  Do not treat `Deusto o San Ignacio *Verificacion pdnt*` as a valid zone for routing. Review these rows manually before use.
+</Warning>
+
+## Custom zones
+
+You can define your own zone names — they are not limited to the 20 standard zones listed above. To add a street with a custom zone:
+
+1. Open the **Nueva Calle** tab.
+2. In the zone dropdown, select **✏ Zona personalizada…**
+3. Type the new zone name in the text field that appears.
+4. Click **Guardar Calle** to save.
+
+Custom entries are stored in `localStorage` under the key `'zonasCustom_v1'` and take priority over the standard dictionary.
+
+<AccordionGroup>
+  <Accordion title="What if a street belongs to multiple zones?">
+    The app uses **first-match wins**. The combined dictionary is built by merging `zonasEstandar` (the standard dictionary from `js/data.js`) with `customStreets` (entries from `localStorage`):
+
+    ```js
+    function getDictionary() {
+        return { ...zonasEstandar, ...customStreets };
+    }
+    ```
+
+    Custom entries are spread last, so they override any matching key in the standard dictionary. Within each dictionary, iteration follows JavaScript object insertion order. The first key whose value is a substring of the street name wins — no further keys are checked.
+
+    If you need a street to resolve to a different zone, add a custom entry for that street key. Because custom entries are merged last, they take precedence over the standard dictionary.
+  </Accordion>
+</AccordionGroup>

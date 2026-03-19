@@ -1,0 +1,124 @@
+---
+title: "Look up a street zone"
+description: "How to use the 🔍 Consultar tab to instantly check which zone any street belongs to."
+---
+
+The **🔍 Consultar** tab lets you check a single street name against the full dictionary (base + custom) without uploading a file. It is useful for spot-checking entries or verifying that a newly added custom street resolves correctly.
+
+---
+
+## How to look up a street
+
+<Steps>
+  <Step title="Open the Consultar tab">
+    Click **🔍 Consultar** in the navigation bar. The tab panel (`#tab-search`) becomes active and the dictionary statistics grid is populated automatically.
+  </Step>
+
+  <Step title="Type a street name">
+    Type any street name — or a partial substring — into the **`#lookupInput`** field. You do not need to use uppercase; the lookup function normalises the input internally.
+  </Step>
+
+  <Step title="Submit the query">
+    Either click the **Consultar** button (`#lookupBtn`) or press **Enter**. Both trigger the same `doLookup()` function:
+
+    ```js
+    $('lookupBtn').addEventListener('click', doLookup);
+    $('lookupInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
+    ```
+  </Step>
+
+  <Step title="Read the result">
+    The result panel (`#lookupResult`) appears below the search row:
+
+    - **Found** — the panel turns green and shows `STREET NAME → Zone Name`.
+    - **Not found** — the panel turns red and suggests navigating to **Nueva Calle** to add the entry.
+  </Step>
+</Steps>
+
+---
+
+## The `doLookup` function
+
+`doLookup()` reads the current value of `lookupInput`, calls `asignarZona()`, and renders one of two states:
+
+```js
+function doLookup() {
+    const q    = $('lookupInput').value.trim();
+    const res  = $('lookupResult');
+    if (!q) return;
+    const zona = asignarZona(q);
+    if (zona) {
+        res.className = 'lookup-result found';
+        res.innerHTML = `<strong>${q.toUpperCase()}</strong> &rarr; <strong>${zona}</strong>`;
+    } else {
+        res.className = 'lookup-result not-found';
+        res.innerHTML = `<strong>${q.toUpperCase()}</strong> no está en el diccionario. Puedes añadirla en "Nueva Calle".`;
+    }
+    res.classList.remove('hidden');
+}
+```
+
+`asignarZona()` in turn iterates over the merged dictionary using `.includes()` substring matching:
+
+```js
+function asignarZona(calle) {
+    if (!calle) return '';
+    const upper = calle.toString().toUpperCase().trim();
+    for (const [clave, zona] of Object.entries(getDictionary())) {
+        if (upper.includes(clave.toUpperCase())) return zona;
+    }
+    return '';
+}
+```
+
+---
+
+## Substring matching explained
+
+Because `asignarZona()` checks whether the input **contains** the dictionary key (not whether they are equal), partial names work:
+
+| You type | Matched key | Result |
+|---|---|---|
+| `AV MADARIAGA` | `AV MADARIAGA` | Deusto |
+| `MADARIAGA` | `AV MADARIAGA` | Deusto |
+| `AV MADARIAGA 14` | `AV MADARIAGA` | Deusto |
+| `GENERAL EGUIA 3` | `GENERAL EGUIA` | Bilbao Centro |
+| `RI DEUSTU BLOQUE 2` | `RI DEUSTU` | Deusto Muelle |
+| `CALLE INVENTADA` | *(no match)* | *(empty — not found)* |
+
+<Tip>
+If a street is not found, try a shorter substring. For example, if `AV LEHENDAKARI AGUIRRE` returns nothing, try `LEHENDAKARI AGUIR` — that is the key used in the base dictionary for that street.
+</Tip>
+
+<Note>
+The lookup always uses the **merged** dictionary: base entries from `data.js` plus any custom entries you have saved. If you recently added a custom entry, it will be found here immediately.
+</Note>
+
+---
+
+## Dictionary statistics
+
+Below the search card, the **📊 Estadísticas del Diccionario** section (`#dictStats`) shows a grid with the number of entries per zone. The grid is rendered by `renderDictStats()` whenever you switch to this tab:
+
+```js
+function renderDictStats() {
+    const dict   = getDictionary();
+    const byZone = {};
+    Object.values(dict).forEach(z => { byZone[z] = (byZone[z] || 0) + 1; });
+
+    $('dictStats').innerHTML =
+        Object.entries(byZone)
+            .sort((a, b) => b[1] - a[1])
+            .map(([z, n]) => `
+                <div class="ds-item">
+                    <div class="ds-name">${z}</div>
+                    <div class="ds-num">${n}</div>
+                </div>`).join('')
+        + `<div class="ds-item" style="border-color:rgba(230,48,48,.3)">
+               <div class="ds-name">Total entradas</div>
+               <div class="ds-num" style="color:var(--red)">${Object.keys(dict).length}</div>
+           </div>`;
+}
+```
+
+Zones are sorted from the most entries to the fewest. A final **Total entradas** cell shows the combined count across the entire dictionary. Custom entries you have added are included in these counts.

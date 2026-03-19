@@ -1,0 +1,154 @@
+---
+title: "Add streets to the dictionary"
+description: "How to add custom street entries via the ➕ Nueva Calle tab so the app can assign them a zone."
+---
+
+The base dictionary in `data.js` covers ~500 Bilbao street patterns across 20 zones. When a street in your Excel file is not matched, the **➕ Nueva Calle** tab lets you add it to a personal dictionary that is stored in the browser and takes priority over the base entries.
+
+---
+
+## Adding a new entry
+
+<Steps>
+  <Step title="Open the Nueva Calle tab">
+    Click the **➕ Nueva Calle** button in the top navigation bar. The tab panel (`#tab-addstreet`) becomes active.
+  </Step>
+
+  <Step title="Enter the street name">
+    Type the street name into the **Nombre de la calle** field (`#newStreetInput`). You can type in any case — the value is automatically converted to uppercase before saving:
+
+    ```js
+    const calle = $('newStreetInput').value.trim().toUpperCase();
+    ```
+
+    <Tip>
+    Because the lookup engine uses `.includes()` substring matching, you do not have to enter the full street name. A partial key like `GRAN VÍA` will match any street whose name contains that string.
+    </Tip>
+  </Step>
+
+  <Step title="Select or create a zone">
+    Choose a zone from the **Zona** dropdown (`#zoneSelect`). The dropdown contains all 20 standard zones:
+
+    | Zone name |
+    |---|
+    | Deusto |
+    | Deusto Muelle |
+    | Deusto Monte |
+    | San Ignacio |
+    | Matiko |
+    | Matiko Alto |
+    | Bilbao Centro |
+    | Bilbao-Basurtu |
+    | Bilbao Muelle |
+    | Kasko Viejo |
+    | Santutxu |
+    | Santutxu Alto |
+    | San Francisco |
+    | Miribilla |
+    | Zamakola |
+    | Zorroza |
+    | Zurbaranbarri |
+    | Rekalde |
+    | Txurdinaga |
+    | Txurdinaga - Alto |
+
+    If the street belongs to a zone that is not in this list, select **✏ Zona personalizada…** at the bottom of the dropdown. A text field (`#customZoneInput`) appears where you can type any free-form zone name.
+  </Step>
+
+  <Step title="Click Guardar Calle">
+    Click **Guardar Calle** (`#addStreetBtn`). The entry is saved to `localStorage` under the key `zonasCustom_v1`:
+
+    ```js
+    customStreets[calle] = zona;
+    saveCustom(); // → localStorage.setItem('zonasCustom_v1', JSON.stringify(customStreets))
+    ```
+
+    A green confirmation message confirms the save. The input fields are cleared automatically so you can add another entry straight away.
+  </Step>
+</Steps>
+
+---
+
+## Validation
+
+Before saving, the app performs two checks:
+
+1. **Empty fields** — if either the street name or the zone is blank, a red error message is shown and nothing is saved.
+2. **Already in the base dictionary** — if the uppercased key already exists in `zonasEstandar`, saving is blocked:
+
+```js
+if (zonasEstandar[calle]) {
+    return showFeedback(fb, 'err',
+        `"${calle}" ya existe en el diccionario base → ${zonasEstandar[calle]}`);
+}
+```
+
+<Note>
+You cannot overwrite a base-dictionary entry from the UI. If you need a different zone assignment for a street that is already in `data.js`, you must edit `data.js` directly and reload the app.
+</Note>
+
+---
+
+## Priority over base entries
+
+Custom entries always win. The dictionary used by `asignarZona()` is built by spreading `customStreets` on top of `zonasEstandar`:
+
+```js
+function getDictionary() {
+    // Custom entries take priority over the base dictionary
+    return { ...zonasEstandar, ...customStreets };
+}
+```
+
+This means if you add a custom entry with the same key as a base entry, your version is used for all subsequent lookups — including when re-processing an Excel file.
+
+---
+
+## Managing your custom entries
+
+### Mis Calles Personalizadas list
+
+Every saved entry appears in the **Mis Calles Personalizadas** card below the form. Each row shows the uppercase key, an arrow, and the zone name. To remove a single entry, click the **✕** button on its row:
+
+```js
+list.querySelectorAll('.btn-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+        delete customStreets[btn.dataset.key];
+        saveCustom();
+        renderCustomList();
+    });
+});
+```
+
+### Export to JSON
+
+Click **Exportar mis calles (JSON)** (`#exportCustomBtn`) to download all your custom entries as `calles_personalizadas.json`. The file is a plain JSON object with uppercase keys and zone-name values:
+
+```json
+{
+  "GRAN VÍA": "Bilbao Centro",
+  "ALAMEDA REKALDE": "Rekalde"
+}
+```
+
+This file can serve as a backup or be shared with other users of the app.
+
+### Clear all entries
+
+Click **Eliminar todas** (`#clearCustomBtn`) to delete every custom entry at once. The app asks for confirmation before proceeding. If you confirm, `customStreets` is reset to an empty object and `localStorage` is updated immediately.
+
+<Warning>
+Deleting all entries is permanent within the browser. There is no undo. Export your entries to JSON first if you want a backup.
+</Warning>
+
+---
+
+## Quick-add from the unmatched list
+
+When you process an Excel file and some streets are not matched, the **Calles No Identificadas** section shows clickable tags. Clicking any tag:
+
+1. Switches to the **➕ Nueva Calle** tab automatically.
+2. Pre-fills `#newStreetInput` with the street name.
+3. Moves focus to the input so you can select the zone and save immediately.
+
+This makes it fast to resolve a batch of unmatched streets without retyping each name.

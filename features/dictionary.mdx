@@ -1,0 +1,150 @@
+---
+title: "Dictionary viewer"
+description: "Browse, filter, and inspect all street-to-zone mappings in the 📋 Diccionario tab."
+---
+
+The **📋 Diccionario** tab gives you a full view of every entry the app uses when assigning zones — both the ~500 base entries from `data.js` and any custom entries you have added.
+
+---
+
+## Opening the dictionary
+
+Click **📋 Diccionario** in the navigation bar. The tab panel (`#tab-dictionary`) becomes active and `renderDictionary()` is called immediately to populate the table.
+
+```js
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        // ...
+        if (btn.dataset.tab === 'dictionary') renderDictionary();
+    });
+});
+```
+
+---
+
+## Table columns
+
+The dictionary table (`#dictTable`) has three columns:
+
+| Column | Description |
+|---|---|
+| **Clave (Calle)** | The uppercase string used for `.includes()` substring matching |
+| **Zona** | The zone name this key maps to |
+| **Fuente** | `Personal` badge for custom entries; plain `Base` label for base entries |
+
+The **Fuente** column is determined by checking whether the key exists in `customStreets`:
+
+```js
+const isCustom = customStreets[k] !== undefined;
+// renders either a green 'Personal' badge or a muted 'Base' label
+```
+
+---
+
+## Filtering entries
+
+### Search by text
+
+Type in the **Buscar calle o zona…** field (`#dictSearch`) to filter entries in real time. The filter matches against both the key and the zone name (case-insensitive):
+
+```js
+const filtered = allEntries.filter(([k, v]) =>
+    (!q  || k.includes(q) || v.toUpperCase().includes(q)) &&
+    (!zf || v === zf)
+);
+```
+
+For example, typing `deusto` will show all entries whose zone contains that word, as well as any key that contains the string `DEUSTO`.
+
+### Filter by zone
+
+Use the **Todas las zonas** dropdown (`#dictZoneFilter`) to show only entries belonging to a specific zone. The dropdown is populated dynamically the first time the tab is opened, with one option per distinct zone found in the merged dictionary:
+
+```js
+if (zoneFilter.options.length <= 1) {
+    [...new Set(Object.values(dict))].sort().forEach(z => {
+        const opt = document.createElement('option');
+        opt.value = z; opt.textContent = z;
+        zoneFilter.appendChild(opt);
+    });
+}
+```
+
+Both filters work together — you can combine a text search with a zone filter.
+
+---
+
+## Entry count
+
+Above the table, the **`#dictCounter`** paragraph always shows how many entries are currently visible versus the total:
+
+> *Mostrando 12 de 503 entradas*
+
+This updates live as you type or change the zone filter.
+
+---
+
+## Sample base entries
+
+The base dictionary in `js/data.js` is organised by zone. Here is a representative sample:
+
+```js
+// Deusto
+"ANDALUCÍA":             "Deusto",
+"AV MADARIAGA":          "Deusto",
+
+// Deusto Muelle
+"RI DEUSTU":             "Deusto Muelle",
+
+// Bilbao Centro
+"GENERAL EGUIA":         "Bilbao Centro",
+
+// Deusto Monte
+"GORBEIA":               "Deusto Monte",
+"MONTE JATA":            "Deusto Monte",
+```
+
+Keys are uppercase substrings, so a single key can match many different full street names that share that substring.
+
+<Note>
+The base dictionary has ~500 entries spread across 20 zones. Because matching is by substring, each entry typically covers multiple street name variants (with or without house numbers, accents, or prefixes).
+</Note>
+
+---
+
+## Base vs. custom entries
+
+<Tabs>
+  <Tab title="Base entries">
+    Base entries come from `zonasEstandar` in `js/data.js`. They are part of the app's source code and are available to all users without any setup.
+
+    They appear in the **Fuente** column with a plain, muted **Base** label.
+  </Tab>
+  <Tab title="Custom (Personal) entries">
+    Custom entries are saved by you via the **➕ Nueva Calle** tab. They are stored in `localStorage` under the key `zonasCustom_v1` and are only available in the current browser.
+
+    They appear in the **Fuente** column with a green **Personal** badge.
+
+    Custom entries take priority: the merged dictionary is built as `{ ...zonasEstandar, ...customStreets }`, so if a key exists in both, your custom zone is used.
+  </Tab>
+</Tabs>
+
+---
+
+## Frequently asked questions
+
+<Accordion title="Why does a key like 'AV MADARIAGA' match streets I didn't expect?">
+  The lookup engine uses JavaScript's `.includes()` method, which checks whether the street name from your Excel file **contains** the dictionary key as a substring. A key of `AV MADARIAGA` will match any value that contains those exact characters, including `AV MADARIAGA 14`, `CALLE AV MADARIAGA`, and so on. If you are seeing unwanted matches, the key in the dictionary may be too short or too generic.
+</Accordion>
+
+<Accordion title="Why can I see entries from other zones when I search for a zone name in the text box?">
+  The text search matches against both the **Clave** column and the **Zona** column. If you type a word that appears in a zone name but also happens to be a substring of a key in a different zone, both will be returned. Use the **zone dropdown** for an exact zone filter.
+</Accordion>
+
+<Accordion title="Can I edit an existing base entry from this tab?">
+  No. The dictionary viewer is read-only. To change how a base entry is mapped, you either need to edit `js/data.js` directly and reload the app, or add a custom entry with the same key via the **➕ Nueva Calle** tab — custom entries take priority over base entries.
+</Accordion>
+
+<Accordion title="My custom entries are not showing in the dictionary. What happened?">
+  Custom entries are stored in `localStorage` under `zonasCustom_v1`. They are specific to the browser and device you used when you added them. If you cleared your browser storage, switched browsers, or opened the app in a private/incognito window, the custom entries will not be present. You can restore them by importing a previously exported `calles_personalizadas.json` file or by re-entering the entries in the **➕ Nueva Calle** tab.
+</Accordion>

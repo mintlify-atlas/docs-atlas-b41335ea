@@ -1,0 +1,162 @@
+---
+title: "Process Excel files"
+description: "How the main Excel upload-process-download workflow works in Asignador de Zonas."
+---
+
+The **📁 Procesar Excel** tab is the core of the application. You upload a spreadsheet, the app assigns each street to its zone, and you download the enriched file.
+
+## Requirements
+
+Your Excel file must contain a column named exactly **`Calle`**. The app reads the first sheet of the workbook using [SheetJS](https://sheetjs.com/) and maps every row through `asignarZona()`. All other columns in your file are preserved in the output unchanged.
+
+<Note>
+Accepted file formats: `.xlsx` and `.xls`. Any other extension is silently rejected by the drop zone.
+</Note>
+
+## Processing flow
+
+<Steps>
+  <Step title="Drop or select your file">
+    Drag your `.xlsx` / `.xls` file onto the drop zone, or click anywhere inside it to open the file picker. The **Procesar Archivo** button becomes active as soon as a valid file is loaded.
+
+    The drop zone accepts the file via `dragover` / `drop` events and passes it through to the hidden `<input id="fileInput">` so that the same processing path is always used:
+
+    ```js
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && /\.xlsx?$/i.test(file.name)) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            processBtn.disabled = false;
+        }
+    });
+    ```
+  </Step>
+
+  <Step title="Click Procesar Archivo">
+    Click **Procesar Archivo** to start processing. The button label changes to *Procesando…* and is disabled while the file is being read.
+
+    Internally, SheetJS reads the file as an `ArrayBuffer` and converts the first sheet to a JSON array:
+
+    ```js
+    const buffer   = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer);
+    const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
+    ```
+
+    Each row object is then extended with a `Zona` field:
+
+    ```js
+    processedData = jsonData.map(row => ({
+        ...row,
+        Zona: asignarZona(row.Calle),
+    }));
+    ```
+  </Step>
+
+  <Step title="Review the results">
+    After processing, four sections appear below the upload card:
+
+    - **Statistics bar** — total streets, identified, not found, and coverage percentage.
+    - **Distribución por Zonas** — a chip list showing how many streets fell into each zone, sorted from highest to lowest count.
+    - **Calles No Identificadas** — clickable tags for every street that returned no zone match.
+    - **Vista Previa** — a paginated, filterable table of all rows.
+  </Step>
+
+  <Step title="Download the result">
+    Click **Descargar Resultado** to export `Calles_Asignadas.xlsx`. The file contains all original columns plus the new `Zona` column, in a sheet named *Calles con Zonas*:
+
+    ```js
+    const ws = XLSX.utils.json_to_sheet(processedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Calles con Zonas');
+    XLSX.writeFile(wb, 'Calles_Asignadas.xlsx');
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Zone lookup logic
+
+The `asignarZona()` function is the heart of the matching engine. It uppercases the input street name, then iterates over every entry in the merged dictionary (base + custom) checking for a substring match:
+
+```js
+function asignarZona(calle) {
+    if (!calle) return '';
+    const upper = calle.toString().toUpperCase().trim();
+    for (const [clave, zona] of Object.entries(getDictionary())) {
+        if (upper.includes(clave.toUpperCase())) return zona;
+    }
+    return '';
+}
+```
+
+<Tip>
+Because matching uses `.includes()`, a dictionary key such as `AV MADARIAGA` will match any street name that contains that substring — for example, `"AV MADARIAGA, 12"` or `"CALLE AV MADARIAGA"`.
+</Tip>
+
+The dictionary is built by `getDictionary()`, which merges the base entries from `data.js` with any custom entries stored in `localStorage`:
+
+```js
+function getDictionary() {
+    return { ...zonasEstandar, ...customStreets };
+}
+```
+
+Custom entries appear last in the spread, so they take priority over base entries when the same key exists in both.
+
+---
+
+## Statistics bar
+
+After processing, the statistics bar (`#statsBar`) shows four counters:
+
+| Field | Description |
+|---|---|
+| **Total calles** | Total number of rows read from the file |
+| **Identificadas** | Rows where `asignarZona()` returned a non-empty zone |
+| **No encontradas** | Rows with no zone match (`total − found`) |
+| **Cobertura** | Percentage of rows that were matched (`found / total × 100`) |
+
+---
+
+## Zone breakdown
+
+The **Distribución por Zonas** card groups matched rows by zone and lists them sorted from most to fewest entries. Each chip shows the zone name and its row count.
+
+---
+
+## Unmatched streets
+
+Every street that returned no zone is listed as a clickable tag in the **Calles No Identificadas** card. Clicking a tag navigates you directly to the **➕ Nueva Calle** tab and pre-fills the street name in `newStreetInput`, so you can add it to the dictionary without retyping.
+
+You can also export all unmatched streets to a plain-text file:
+
+- Click **Exportar .txt** to download `calles_no_identificadas.txt`, one street per line.
+
+---
+
+## Preview table
+
+The **Vista Previa** card shows a paginated table of all processed rows. The table has four columns: row number, **Calle**, **Zona**, and **Estado** (a green *✓ Encontrada* badge or a red *✗ No identificada* badge).
+
+### Filtering and search
+
+Use the controls in the preview header to narrow down the results:
+
+- **Filtrar…** text input — filters rows where either `Calle` or `Zona` contains the typed string (case-insensitive).
+- **Dropdown** — switch between *Todas*, *Identificadas*, and *No encontradas*.
+
+Both controls reset to page 1 on every change.
+
+### Pagination
+
+Rows are shown `50` at a time (`PAGE_SIZE = 50`). Page buttons appear below the table when there is more than one page. Click any page number to jump directly to it.
+
+<Warning>
+The preview table reflects the current filter state. If you export with **Descargar Resultado**, the downloaded file always contains **all** processed rows regardless of the active filter.
+</Warning>

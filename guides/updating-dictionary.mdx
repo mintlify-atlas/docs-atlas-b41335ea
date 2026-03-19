@@ -1,0 +1,97 @@
+---
+title: 'Updating the dictionary'
+description: 'How to add, modify, or remove entries from the base street dictionary.'
+---
+
+The app maps street name fragments to Bilbao geographic zones. There are two ways to manage entries: through the UI (no code changes) or by editing the source file directly.
+
+## Method 1 — Via the UI
+
+Use the **➕ Nueva Calle** tab in the app to add custom entries without touching any code.
+
+<Steps>
+  <Step title="Open the Nueva Calle tab">
+    Click the **➕ Nueva Calle** tab in the app interface.
+  </Step>
+  <Step title="Enter the street name fragment and zone">
+    Type the street name fragment (it will be stored in uppercase automatically) and the zone it belongs to.
+  </Step>
+  <Step title="Save">
+    Click **Guardar Calle**. The entry is saved to `localStorage` in your browser.
+  </Step>
+</Steps>
+
+<Note>
+UI-added entries take priority over base dictionary entries. The app merges them as `{ ...zonasEstandar, ...customStreets }`, so your custom entries always win in case of a conflict.
+</Note>
+
+UI entries persist across sessions in the same browser but are not shared with other devices or users. For permanent, shared changes, edit `js/data.js` directly.
+
+## Method 2 — Via source code
+
+Edit `js/data.js` to add entries to the base dictionary that ship with the app.
+
+### Dictionary format
+
+The dictionary is a plain JavaScript object named `zonasEstandar`. Keys are uppercase street name fragments; values are zone names.
+
+```js
+// ─── DEUSTO ──────────────────────────────────────────────
+"ANDALUCÍA":             "Deusto",
+"AV MADARIAGA":          "Deusto",
+"BLAS DE OTERO":         "Deusto",
+```
+
+### How matching works
+
+The app calls `.toUpperCase()` on the street name from the Excel file, then checks whether the dictionary key is contained in that string using `.includes()`. This means:
+
+- Keys must be **uppercase**.
+- A key matches any street name that **contains** the key as a substring. For example, `"AV MADARIAGA"` matches `"AV MADARIAGA KALEA"`, `"AV MADARIAGA 12"`, and any other string containing those characters.
+- Shorter, more general keys will match more streets. More specific keys match fewer streets.
+
+<Warning>
+If a key is too broad, it may produce false positives. Test your entries against real street names from your Excel files before deploying.
+</Warning>
+
+### Adding a new zone section
+
+<Steps>
+  <Step title="Open js/data.js">
+    Open `js/data.js` in your editor.
+  </Step>
+  <Step title="Add a comment header and your entries">
+    Follow the existing style — add a comment header for the zone, then list your entries:
+
+    ```js
+    // ─── MY NEW ZONE ──────────────────────────────────────────
+    "NOMBRE DE LA CALLE":  "My New Zone",
+    "OTRA CALLE":          "My New Zone",
+    ```
+
+    Make sure the object structure remains valid: each entry ends with a comma (except the last entry in the object).
+  </Step>
+  <Step title="Save the file">
+    Save `js/data.js`.
+  </Step>
+  <Step title="Bump the Service Worker cache version">
+    Open `sw.js` and increment the `CACHE` constant:
+
+    ```js
+    const CACHE = 'zonas-bilbao-v6.1.0'; // ← increment on each deploy
+    ```
+
+    This forces browsers to discard the old cached `data.js` and fetch the updated file. Without this step, returning users may continue running the old dictionary.
+  </Step>
+</Steps>
+
+<Tip>
+Group related streets under the same zone comment for readability. Consistent formatting makes the file easier to maintain.
+</Tip>
+
+### Modifying or removing entries
+
+- **Modify**: Change the value (zone name) of an existing key, then bump the cache version.
+- **Remove**: Delete the key-value line, then bump the cache version.
+
+After any change to `js/data.js`, always redeploy the app and increment the `CACHE` version in `sw.js`. See [Service Worker](/guides/service-worker) for more on cache versioning.

@@ -1,0 +1,123 @@
+---
+title: 'Dependencies'
+description: 'All external libraries, browser APIs, and fonts used by the app.'
+---
+
+The app is a static PWA with no build step, no npm, and no bundler. All dependencies are either loaded from a CDN or provided natively by the browser.
+
+## External libraries
+
+### SheetJS v0.19.3
+
+| Property | Value |
+|---|---|
+| Version | `0.19.3` |
+| Purpose | Read and write Excel files (`.xlsx`, `.xls`) |
+| Load method | CDN via `<script defer>` |
+
+The script tag in `index.html`:
+
+```html
+<script defer src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+```
+
+<Note>
+  The `defer` attribute means SheetJS loads after HTML parsing completes. Do not call any `XLSX.*` method before the `DOMContentLoaded` event fires.
+</Note>
+
+**SheetJS API calls used by the app:**
+
+```js
+XLSX.read(buffer)                              // Parse ArrayBuffer → Workbook
+XLSX.utils.sheet_to_json(sheet)                // Sheet → Array of row objects
+XLSX.utils.json_to_sheet(data)                 // Array of objects → Sheet
+XLSX.utils.book_new()                          // Create empty workbook
+XLSX.utils.book_append_sheet(wb, ws, 'name')   // Add sheet to workbook
+XLSX.writeFile(wb, 'filename.xlsx')            // Trigger file download
+```
+
+Full processing flow:
+
+```js
+// Read
+const workbook = XLSX.read(buffer);
+const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+// Write
+const ws = XLSX.utils.json_to_sheet(processedData);
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, 'Calles con Zonas');
+XLSX.writeFile(wb, 'Calles_Asignadas.xlsx');
+```
+
+## Application scripts
+
+The app loads two local scripts. Load order matters:
+
+| Order | File | Role |
+|---|---|---|
+| 1 | `js/data.js` | Defines `zonasEstandar` — the standard street-to-zone dictionary |
+| 2 | `js/app.js` | Application logic — references `zonasEstandar` from `data.js` |
+
+`app.js` references `zonasEstandar` at startup, so `data.js` must be parsed first. Reversing the order causes a `ReferenceError`.
+
+## Fonts
+
+Both fonts are loaded from Google Fonts CDN. No self-hosted font files are required.
+
+| Font | Weights | Usage |
+|---|---|---|
+| Bebas Neue | 400 | Headings and display text |
+| DM Sans | 300, 400, 500, 600 | Body text and UI labels |
+
+## Browser APIs
+
+All browser APIs listed below are built into modern browsers — no polyfills or additional libraries are needed.
+
+| API | Purpose |
+|---|---|
+| `localStorage` | Persist custom street entries across sessions under the key `'zonasCustom_v1'` |
+| Service Worker / Cache API | Cache app assets for offline use; cache name: `'zonas-bilbao-v6.1.0'` |
+| File API (`ArrayBuffer`) | Read the uploaded Excel file as a binary buffer before passing it to SheetJS |
+| DataTransfer API | Handle drag-and-drop file uploads onto the drop zone |
+| `Blob` + `URL.createObjectURL` | Generate and trigger downloads for the unmatched streets `.txt` file and the custom dictionary JSON export |
+
+### localStorage
+
+Custom entries are stored as a JSON string:
+
+```js
+localStorage.setItem('zonasCustom_v1', JSON.stringify(customStreets));
+const saved = JSON.parse(localStorage.getItem('zonasCustom_v1') || '{}');
+```
+
+### Service Worker / Cache API
+
+The service worker caches all static assets on first load. The cache is versioned:
+
+```js
+const CACHE_NAME = 'zonas-bilbao-v6.1.0';
+```
+
+When the cache version changes, the old cache is deleted and assets are re-fetched.
+
+## Browser compatibility
+
+| Browser | Support |
+|---|---|
+| Chrome / Edge (latest) | ✅ Recommended |
+| Firefox (latest) | ✅ Supported |
+| Safari / iOS Safari (latest) | ✅ Supported |
+
+<Tip>
+  For best performance, use Chrome or Edge. All PWA features — including home screen installation and offline mode — are fully supported in these browsers.
+</Tip>
+
+## No build step required
+
+The app has no `package.json`, no bundler (Webpack, Vite, etc.), and no compilation step. To deploy, copy the project files to any static file host. To run locally, serve the directory with any HTTP server — for example:
+
+```bash
+npx serve .
+```

@@ -1,0 +1,129 @@
+---
+title: 'Service Worker'
+description: 'Understanding and managing the Service Worker for cache control and app updates.'
+---
+
+The Service Worker (`sw.js`) handles pre-caching, cache invalidation, and offline fetch interception. Understanding how it works helps you deploy updates reliably.
+
+## Lifecycle events
+
+The Service Worker has three lifecycle events: **install**, **activate**, and **fetch**.
+
+### Install
+
+On install, the Service Worker pre-caches every asset in the `ASSETS` array:
+
+```js
+const CACHE = 'zonas-bilbao-v6.1.0';
+
+const ASSETS = [
+    './index.html',
+    './manifest.json',
+    './css/styles.css',
+    './js/data.js',
+    './js/app.js',
+    './assets/bilbo.jpg',
+    './assets/images.png',
+    './assets/icono192x192.png',
+    './assets/icono512x512.png',
+    'https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js',
+    'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap',
+];
+```
+
+`cache.addAll(ASSETS)` fetches and stores all listed resources atomically — if any single request fails, the install fails. After caching, `self.skipWaiting()` activates the new Service Worker immediately without waiting for existing tabs to close.
+
+### Activate
+
+On activate, the Service Worker deletes every cache whose key does not match the current `CACHE` name:
+
+```js
+const CACHE = 'zonas-bilbao-v6.1.0'; // ← increment on each deploy
+```
+
+Any cache from a previous version (e.g., `zonas-bilbao-v6.0.0`) is removed. This keeps storage clean and ensures stale assets from old deployments cannot be served.
+
+### Fetch
+
+The Service Worker uses a **cache-first** strategy:
+
+1. A request comes in.
+2. The Service Worker checks the cache.
+3. If the resource is found in the cache, it is returned immediately — no network request.
+4. If the resource is not in the cache, the request is forwarded to the network.
+
+This makes the app fast and offline-capable after the first load.
+
+## Updating the app
+
+When you deploy a new version of the app, you must bump the `CACHE` constant in `sw.js`:
+
+```js
+const CACHE = 'zonas-bilbao-v6.1.0'; // ← increment on each deploy
+```
+
+Change it to, for example, `zonas-bilbao-v6.2.0`. This triggers the full update flow:
+
+<Steps>
+  <Step title="User visits the app">
+    The browser detects that `sw.js` has changed and installs the new Service Worker in the background.
+  </Step>
+  <Step title="New Service Worker installs">
+    The new Service Worker fetches and caches all assets under the new cache name. `skipWaiting()` activates it immediately.
+  </Step>
+  <Step title="Old caches are deleted">
+    The activate event runs and removes all caches with keys that do not match the new `CACHE` name.
+  </Step>
+  <Step title="Page reloads automatically">
+    The registration code in `index.html` detects the update and reloads the page so users immediately see the new version.
+  </Step>
+</Steps>
+
+## Service Worker registration
+
+The registration code in `index.html` handles the update detection and automatic reload:
+
+```js
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(reg => {
+            reg.onupdatefound = () => {
+                const w = reg.installing;
+                w.onstatechange = () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                        window.location.reload();
+                    }
+                };
+            };
+        })
+        .catch(err => console.error('SW error:', err));
+}
+```
+
+- `onupdatefound` fires when the browser detects a new `sw.js`.
+- `onstatechange` watches the installing worker's state.
+- When the new worker reaches `'installed'` and a previous controller exists, the page reloads automatically to activate the fresh cache.
+
+<Warning>
+If you update `js/data.js`, `js/app.js`, or any other asset but forget to bump the `CACHE` version, the browser will keep serving the old cached files. Users will not receive your changes until the cache is invalidated.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Users are still seeing the old version after deployment">
+    You most likely forgot to bump the `CACHE` constant in `sw.js`. Update it and redeploy. The Service Worker compares the cache key on each load — if the key is unchanged, it considers the cache valid and serves old files.
+  </Accordion>
+  <Accordion title="The Service Worker is not registering">
+    Check that the app is served over **HTTPS** (or `localhost`). The Service Worker API is blocked on plain HTTP and `file://` URLs. Verify in DevTools under **Application → Service Workers**.
+  </Accordion>
+  <Accordion title="An asset fails to cache on install">
+    `cache.addAll()` is atomic — if one request fails, the entire install fails and the Service Worker does not activate. Check the browser console for network errors. Common causes: a CDN URL has changed, or a file path in `ASSETS` is incorrect.
+  </Accordion>
+  <Accordion title="How do I force a cache clear manually?">
+    In Chrome DevTools, go to **Application → Storage** and click **Clear site data**. This removes all caches and unregisters the Service Worker. The next page load will reinstall it from scratch.
+  </Accordion>
+  <Accordion title="The app installed as a PWA is not updating">
+    Installed PWAs use the same Service Worker update flow. Make sure you bumped the `CACHE` version and redeployed. If the installed app still shows stale content, open it in the browser (not the standalone window) and hard-refresh, or clear site data from DevTools.
+  </Accordion>
+</AccordionGroup>

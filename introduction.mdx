@@ -1,0 +1,104 @@
+---
+title: "Introduction"
+description: "Asignador de Zonas de Bilbao — A Progressive Web App that processes Excel files and automatically assigns each street to its corresponding zone in Bilbao."
+---
+
+## What is Asignador de Zonas de Bilbao?
+
+**Asignador de Zonas de Bilbao** is a static, offline-capable Progressive Web App (PWA) that automates the process of mapping streets to their geographic zones within Bilbao, Basque Country, Spain.
+
+You upload an Excel file containing a list of street names, and the app cross-references each entry against a built-in dictionary of ~500 street-to-zone mappings. The result is the same Excel file enriched with a new `Zona` column — ready to download in seconds.
+
+No server, no build step, no account needed. Open it in a browser, install it on your phone or desktop, and use it completely offline.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Upload your first Excel file and download results in under a minute
+  </Card>
+  <Card title="Process Excel" icon="file-excel" href="/features/process-excel">
+    Learn how the Excel upload, processing, and download flow works
+  </Card>
+  <Card title="Add Streets" icon="plus" href="/features/add-street">
+    Extend the dictionary with your own street entries
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/guides/deployment">
+    Deploy the app to GitHub Pages, Netlify, Vercel, or any static host
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Excel processing" icon="table">
+    Upload `.xlsx` or `.xls` files. Each row's `Calle` column is matched against the zone dictionary and a `Zona` column is appended.
+  </Card>
+  <Card title="Coverage statistics" icon="chart-bar">
+    After processing, see total streets, identified count, missing count, and overall coverage percentage.
+  </Card>
+  <Card title="Unmatched street workflow" icon="triangle-exclamation">
+    Streets with no zone match are listed and clickable — one click pre-fills the Add Street form.
+  </Card>
+  <Card title="Custom dictionary entries" icon="pen-to-square">
+    Add your own entries via the UI. They persist in `localStorage` and take priority over the base dictionary.
+  </Card>
+  <Card title="Offline PWA" icon="wifi-slash">
+    Service Worker caches all assets. The app works without any internet connection after first load.
+  </Card>
+  <Card title="Installable" icon="mobile">
+    Install on Android, iOS, Windows, or macOS as a standalone app via browser install prompts.
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Open the app">
+    Navigate to the hosted URL in any modern browser. On first visit, the Service Worker caches all assets for offline use.
+  </Step>
+  <Step title="Upload your Excel">
+    Drag and drop a `.xlsx` or `.xls` file onto the upload zone, or click to open the file picker. The file must contain a column named `Calle`.
+  </Step>
+  <Step title="Process">
+    Click **Procesar Archivo**. The app reads each row, looks up the street name in the dictionary using `.includes()` matching, and assigns the corresponding zone.
+  </Step>
+  <Step title="Review results">
+    Check the statistics bar, zone breakdown, and the list of unmatched streets. Use the paginated preview table to filter and search results.
+  </Step>
+  <Step title="Download">
+    Click **Descargar Resultado** to save the enriched Excel file as `Calles_Asignadas.xlsx`.
+  </Step>
+</Steps>
+
+## Available zones
+
+The app covers 20 zones across Bilbao:
+
+| Zone | Zone |
+|---|---|
+| Deusto | Deusto Muelle |
+| Deusto Monte | San Ignacio |
+| Matiko | Matiko Alto |
+| Bilbao Centro | Bilbao-Basurtu |
+| Bilbao Muelle | Kasko Viejo |
+| Santutxu | Santutxu Alto |
+| San Francisco | Miribilla |
+| Zamakola | Zorroza |
+| Zurbaranbarri | Rekalde |
+| Txurdinaga | Txurdinaga - Alto |
+
+<Info>
+  Custom zones can also be created from the **Nueva Calle** tab. Enter any zone name not in the list above by selecting **✏ Zona personalizada…** in the zone dropdown.
+</Info>
+
+## Tech stack
+
+The app is built with zero dependencies beyond a single CDN library:
+
+| Component | Technology |
+|---|---|
+| Language | Vanilla JavaScript (ES2020+) |
+| Excel I/O | [SheetJS](https://sheetjs.com/) v0.19.3 |
+| Offline | Service Worker (Cache API) |
+| Storage | `localStorage` for custom entries |
+| Fonts | Bebas Neue (headings), DM Sans (body) via Google Fonts |
+| Build | None — pure static files |

@@ -1,0 +1,131 @@
+---
+title: 'Deployment'
+description: 'How to deploy the app to any static hosting provider. No build step required.'
+---
+
+Asignador de Zonas de Bilbao is a purely static site — no server, no build step, no dependencies to install. You deploy it by copying the files to any static host.
+
+## Project structure
+
+```
+/
+├── index.html
+├── manifest.json
+├── sw.js
+├── css/styles.css
+├── js/data.js
+├── js/app.js
+└── assets/
+```
+
+<Warning>
+The Service Worker requires **HTTPS** in production. It works on `localhost` without it, but raw `file://` URLs will not register the Service Worker. Use a local dev server instead of opening `index.html` directly from your file system.
+</Warning>
+
+## Local development
+
+<Tabs>
+  <Tab title="npx serve">
+    Run a local static server from the project root:
+
+    ```bash
+    npx serve .
+    ```
+
+    The app is available at `http://localhost:3000`. The Service Worker registers normally on localhost.
+  </Tab>
+  <Tab title="Direct file">
+    You can open `index.html` directly in a browser for basic testing:
+
+    ```bash
+    open index.html
+    ```
+
+    <Note>
+    The Service Worker will not register over the `file://` protocol. Offline features and PWA installation will not work. Use this approach only for quick UI checks.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Production deployment
+
+<Tabs>
+  <Tab title="GitHub Pages">
+    <Steps>
+      <Step title="Push your project to a GitHub repository">
+        Make sure all project files are committed and pushed to your repository.
+      </Step>
+      <Step title="Enable GitHub Pages">
+        Go to **Settings → Pages** in your repository. Under **Source**, select the branch you want to deploy (typically `main`) and choose the root folder `/`.
+      </Step>
+      <Step title="Save and wait for deployment">
+        Click **Save**. GitHub builds and deploys your site automatically. The URL will be `https://<username>.github.io/<repository>/`.
+      </Step>
+      <Step title="Update the Service Worker scope (if needed)">
+        If the app is served from a subdirectory (e.g., `/repository/`), verify that `sw.js` asset paths use `./` relative references — they already do by default.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Netlify">
+    <Steps>
+      <Step title="Connect your repository">
+        Log in to Netlify and click **Add new site → Import an existing project**. Connect your GitHub, GitLab, or Bitbucket repository.
+      </Step>
+      <Step title="Configure build settings">
+        Set the **Build command** to empty (no build step needed) and the **Publish directory** to `.` (the root).
+      </Step>
+      <Step title="Deploy">
+        Click **Deploy site**. Netlify serves your files over HTTPS automatically.
+      </Step>
+    </Steps>
+
+    You can also drag and drop your project folder directly into the Netlify dashboard for a one-off deploy.
+  </Tab>
+  <Tab title="Vercel">
+    <Steps>
+      <Step title="Import your project">
+        Log in to Vercel and click **Add New → Project**. Import your repository.
+      </Step>
+      <Step title="Configure framework preset">
+        Set **Framework Preset** to **Other** (since there is no build step).
+      </Step>
+      <Step title="Deploy">
+        Click **Deploy**. Vercel serves your files over HTTPS automatically.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Firebase Hosting">
+    <Steps>
+      <Step title="Install the Firebase CLI">
+        ```bash
+        npm install -g firebase-tools
+        ```
+      </Step>
+      <Step title="Log in and initialize">
+        ```bash
+        firebase login
+        firebase init hosting
+        ```
+
+        When prompted, set the **public directory** to `.` and answer **No** to configuring as a single-page app.
+      </Step>
+      <Step title="Deploy">
+        ```bash
+        firebase deploy
+        ```
+
+        Firebase serves your site over HTTPS at a `web.app` or `firebaseapp.com` URL.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## After each deployment
+
+Every time you update the app, bump the cache version in `sw.js` so users receive fresh assets:
+
+```js
+const CACHE = 'zonas-bilbao-v6.1.0'; // ← increment on each deploy
+```
+
+See [Service Worker](/guides/service-worker) for details on how cache versioning works.

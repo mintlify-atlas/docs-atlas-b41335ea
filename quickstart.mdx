@@ -1,80 +1,115 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick Start"
+description: "Process your first Excel file and get zone assignments in under a minute."
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+- A modern browser: Chrome, Edge, Firefox, or Safari
+- An Excel file (`.xlsx` or `.xls`) with a column named **`Calle`** containing street names
 
-### Step 1: Set up your local environment
+<Note>
+  No installation, no account, and no server required. The app runs entirely in your browser.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Process your first file
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Open the app">
+    Navigate to the hosted URL in your browser. The app loads instantly — no login needed.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    To run it locally during development:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    npx serve .
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    Or simply open `index.html` directly in your browser.
+  </Step>
 
-### Step 3: Go live
+  <Step title="Prepare your Excel file">
+    Your Excel file must have at least one column called **`Calle`**. The column header must be spelled exactly as shown (capital C, lowercase alle).
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    Example file structure:
+
+    | Calle |
+    |---|
+    | Gran Vía Don Diego López de Haro |
+    | Calle Iparraguirre |
+    | Avenida Madariaga |
+
+    Additional columns are allowed and will be preserved in the output.
+  </Step>
+
+  <Step title="Upload the file">
+    On the **📁 Procesar Excel** tab (active by default), either:
+    - **Drag and drop** your `.xlsx` or `.xls` file onto the upload zone
+    - **Click the upload zone** to open the file picker
+
+    Once a file is selected, the **Procesar Archivo** button activates.
+  </Step>
+
+  <Step title="Click Procesar Archivo">
+    Press the **Procesar Archivo** button. The app reads the file in-browser using SheetJS, runs each street through the zone dictionary, and appends a `Zona` column.
+
+    Processing is instantaneous for typical files (hundreds to thousands of rows).
+  </Step>
+
+  <Step title="Review the results">
+    After processing, the page shows:
+
+    - **Statistics bar** — total streets, identified, not found, and coverage %
+    - **Zone breakdown** — count of streets per zone, sorted by frequency
+    - **Unmatched streets** — streets that had no zone match (click any to add it)
+    - **Preview table** — paginated view with search and filter controls
+  </Step>
+
+  <Step title="Download the result">
+    Click **Descargar Resultado** to download `Calles_Asignadas.xlsx` — your original file with the `Zona` column appended.
+
+    The download works offline; no data is ever sent to a server.
+  </Step>
+</Steps>
+
+## What the output looks like
+
+Your downloaded file will have the same structure as the input, with a `Zona` column added:
+
+| Calle | Zona |
+|---|---|
+| Gran Vía Don Diego López de Haro | Bilbao Centro |
+| Calle Iparraguirre | Bilbao Centro |
+| Avenida Madariaga | Deusto |
+| Calle Desconocida | *(empty — not matched)* |
+
+Rows where no zone was found have an empty `Zona` cell.
+
+## Handle unmatched streets
+
+If some streets were not found, they appear in the **Calles No Identificadas** section below the statistics bar.
+
+- Click any unmatched street to jump to the **➕ Nueva Calle** tab with the street name pre-filled
+- Select the correct zone and click **Guardar Calle**
+- The entry is saved to `localStorage` and will be used in all future processing runs
+- Re-upload your Excel to get the updated assignments
+
+<Tip>
+  Use **Exportar .txt** in the unmatched section to save all unidentified streets as a plain-text file — useful for batch review or sharing with a team.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Add streets to the dictionary" icon="plus" href="/features/add-street">
+    Permanently extend coverage by adding custom street entries
+  </Card>
+  <Card title="Look up a single street" icon="magnifying-glass" href="/features/lookup">
+    Check which zone any street belongs to without uploading a file
+  </Card>
+  <Card title="Browse the full dictionary" icon="book" href="/features/dictionary">
+    View, search, and filter all ~500 base entries
+  </Card>
+  <Card title="Deploy the app" icon="cloud" href="/guides/deployment">
+    Host the app on GitHub Pages, Netlify, or Vercel
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
