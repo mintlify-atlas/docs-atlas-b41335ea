@@ -80,14 +80,14 @@ Because `asignarZona()` checks whether the input **contains** the dictionary key
 | You type | Matched key | Result |
 |---|---|---|
 | `AV MADARIAGA` | `AV MADARIAGA` | Deusto |
-| `MADARIAGA` | `AV MADARIAGA` | Deusto |
 | `AV MADARIAGA 14` | `AV MADARIAGA` | Deusto |
+| `CALLE AV MADARIAGA` | `AV MADARIAGA` | Deusto |
 | `GENERAL EGUIA 3` | `GENERAL EGUIA` | Bilbao Centro |
 | `RI DEUSTU BLOQUE 2` | `RI DEUSTU` | Deusto Muelle |
 | `CALLE INVENTADA` | *(no match)* | *(empty — not found)* |
 
 <Tip>
-If a street is not found, try a shorter substring. For example, if `AV LEHENDAKARI AGUIRRE` returns nothing, try `LEHENDAKARI AGUIR` — that is the key used in the base dictionary for that street.
+Because the input must **contain** the key (not the other way around), `"MADARIAGA"` alone will NOT match the key `"AV MADARIAGA"`. You need to type enough of the street name so it contains the full dictionary key as a substring — for example, `"AV MADARIAGA"` or any name that includes those characters verbatim.
 </Tip>
 
 <Note>

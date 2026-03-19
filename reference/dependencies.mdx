@@ -97,7 +97,7 @@ const saved = JSON.parse(localStorage.getItem('zonasCustom_v1') || '{}');
 The service worker caches all static assets on first load. The cache is versioned:
 
 ```js
-const CACHE_NAME = 'zonas-bilbao-v6.1.0';
+const CACHE = 'zonas-bilbao-v6.1.0';
 ```
 
 When the cache version changes, the old cache is deleted and assets are re-fetched.
